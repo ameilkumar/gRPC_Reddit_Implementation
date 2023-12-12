@@ -1,0 +1,260 @@
+//Ameil Kumar
+//API Design
+//Parallel Reddit Protocol Buffer
+
+syntax = "proto3";
+
+
+package parallelreddit;
+
+// The enum representing the post state
+enum PostState {
+  NORMAL_POST_STATE = 0;
+  LOCKED_POST_STATE = 1;
+  HIDDEN_POST_STATE = 2;
+}
+
+// The enum representing the comment state
+enum CommentState {
+  NORMAL_COMMENT_STATE = 0;
+  HIDDEN_COMMENT_STATE = 1;
+}
+
+// The enum representing the subreddit state
+enum SubredditState {
+  PUBLIC_SUBREDDIT_STATE = 0;
+  PRIVATE_SUBREDDIT_STATE = 1;
+  HIDDEN_SUBREDDIT_STATE = 2;
+}
+
+// The Protocol Buffer to represent a user. Contains user's human-readable ID.
+message User {
+  string user_id = 1;
+}
+
+// The Protocol Buffer to represent a post.
+// Contains title, content, up to one of either an image or video url, an Author, score, state, and timestamp(publication date)
+// Also contians a post id to act as a unique identifier
+// per the EXTRA CREDIT, posts have one subreddit which is represented by its id
+message Post {
+  string title = 1;
+  string text = 2;
+  oneof content_url {
+    string image_url = 3;
+    string video_url = 4;
+  }
+  User author = 5;
+  int32 score = 6;
+  PostState state = 7;
+  string publication_date = 8;
+  uint32 post_id = 9;
+  string subreddit_id = 10;
+}
+
+// The Protocol Buffer to represent a comment.
+// Contains author, either a comment or post that it is posted under, a score, state, and timestamp(publication date)
+// And the content of the comment
+// Also contains a count of the amount of subcomments it has
+message Comment {
+  User author = 1;
+  oneof parent_content {
+    uint32 parent_post_id = 2;
+    uint32 parent_comment_id = 3;
+  }
+  int32 score = 4;
+  CommentState state = 5;
+  string publication_date = 7;
+  uint32 comment_id = 8;
+  string content = 9;
+  uint32 amountOfSubComments = 10;
+}
+
+//EXTRA CREDIT: The Protocol Buffer to represent a subreddit. 
+// Has a human-readable name, state, and a set of tags
+// Also has a unique subreddit ID
+message Subreddit {
+  string name = 1;
+  SubredditState state = 2;
+  repeated string tags = 3;
+  string subreddit_id = 4;
+}
+
+// The ParallelReddit service definition.
+service ParallelReddit {
+  // Creates a post
+  rpc CreatePost (CreatePostRequest) returns (CreatePostResponse) {}
+  // Upvote a post
+  rpc UpvotePost (UpvotePostRequest) returns (UpvotePostResponse) {}
+  // Downvote a post
+  rpc DownvotePost (DownvotePostRequest) returns (DownvotePostResponse) {}
+  // Retrieve post content
+  rpc RetrievePostContent (RetrievePostRequest) returns (RetrievePostResponse) {}
+  // Create a comment
+  rpc CreateComment (CreateCommentRequest) returns (CreateCommentResponse) {}
+  // Upvote a comment
+  rpc UpvoteComment (UpvoteCommentRequest) returns (UpvoteCommentResponse) {}
+  // Downvote a comment
+  rpc DownvoteComment (DownvoteCommentRequest) returns (DownvoteCommentResponse) {}
+  // Retrieve list of N most upvoted comments under a post
+  rpc MostUpvotedComments (MostUpvotedCommentsRequest) returns (MostUpvotedCommentsResponse) {}
+  // Expand comment branch
+  rpc ExpandCommentBranch (ExpandCommentBranchRequest) returns (ExpandCommentBranchResponse) {}
+  // EXTRA CREDIT: Monitor updates
+  // Need a bidirectional stream
+  rpc MonitorUpdates (stream MonitorUpdatesRequest) returns (stream MonitorUpdatesResponse) {}
+}
+
+// Message to send to create a reddit post
+// All the necessary information to create a post
+message CreatePostRequest {
+  string title = 1;
+  string text = 2;
+  oneof content_url {
+    string image_url = 3;
+    string video_url = 4;
+  }
+  User author = 5;
+  int32 score = 6;
+  PostState state = 7;
+  string subreddit_id = 8;
+}
+
+// Response of creating a reddit post
+// The created post
+message CreatePostResponse {
+  Post post_created = 1;
+}
+
+
+// Message to Upvote a post
+// The ID of he post to upvote
+message UpvotePostRequest {
+  uint32 post_id = 1;
+}
+
+// Response of upvoting a post
+// The new score of the post
+message UpvotePostResponse {
+  int32 newScore = 1;
+}
+
+// Message to Downvote a post
+// The ID of the post to downvote
+message DownvotePostRequest {
+  uint32 post_id = 1;
+}
+
+// Response of downvoting a post
+// The new score of the post
+message DownvotePostResponse {
+  int32 newScore = 1;
+}
+
+// Message to retrieve post content
+// The ID of the post to retrieve
+message RetrievePostRequest {
+  uint32 post_id = 1;
+}
+
+// Response of retrieving post content
+// The all information about the post(except post id) Everything needed to display a post
+message RetrievePostResponse {
+  string title = 1;
+  string text = 2;
+  oneof content_url {
+    string image_url = 3;
+    string video_url = 4;
+  }
+  User author = 5;
+  int32 score = 6;
+  PostState state = 7;
+  string publication_date = 8;
+  string subreddit_id = 10;
+}
+
+// Message to create a comment
+// Everything needed to create a comment
+message CreateCommentRequest {
+  User author = 1;
+  oneof parent_content {
+    uint32 parent_post_id = 2;
+    uint32 parent_comment_id = 3;
+  }
+  CommentState state = 5;
+  string content = 6;
+}
+
+// Response from creating a comment:
+// The created comment
+message CreateCommentResponse {
+  Comment createdComment = 1;
+}
+
+// Message to Upvote a comment
+// The ID of the comment to upvote
+message UpvoteCommentRequest {
+  uint32 comment_id = 1;
+}
+
+// Response of upvoting a comment
+// The new score of the comment
+message UpvoteCommentResponse {
+  int32 newScore = 1;
+}
+
+// Message to downvote a comment
+// The ID of the comment to downvote
+message DownvoteCommentRequest {
+  uint32 comment_id = 1;
+}
+
+// Response of downvoting a comment
+// The new score of the comment
+message DownvoteCommentResponse {
+  int32 newScore = 1;
+}
+
+// Message to get most upvoted comments
+// The number of comments to get and the postID to get them from
+message MostUpvotedCommentsRequest {
+  uint32 numberOfComments = 1;
+  uint32 post_id = 2;
+}
+
+// Response to getting the most upvoted comments
+// List of comments(comments have a value indicating how many subcomments they have)
+message MostUpvotedCommentsResponse {
+  repeated Comment comments = 1;
+}
+
+// Message to expand comment branch
+// comment to expand, and how many comments to expand to
+message ExpandCommentBranchRequest {
+  uint32 numberOfComments = 1;
+  uint32 commentId = 2;
+}
+
+// Response to expanding comment branch 
+// A list of all expanded comments. This is enough since each comment has a field referencing its parent. 
+// This way, the tree can be reconstructed without limiting how. 
+// This approach allows freedom for how comment trees are displayed. 
+message ExpandCommentBranchResponse {
+  repeated Comment expandedComments = 1;
+}
+
+// Message to monitor updates
+// A post or comment. Will be a post on first call and then a comment on each additional call
+message MonitorUpdatesRequest {
+  oneof input_content {
+    uint32 originalPostID = 1;
+    uint32 addedCommentID = 2;
+  }
+}
+
+// Response to monitor updates
+// return post score and ID of the original post and map of comment scores mapped to their IDs
+message MonitorUpdatesResponse {
+  optional int32 postScore = 1;
+  optional uint32 postID = 2;
+  map<uint32, int32> commentScores = 3;
+}
